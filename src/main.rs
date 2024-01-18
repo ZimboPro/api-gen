@@ -10,7 +10,7 @@ use merge_yaml_hash::MergeYamlHash;
 use oapi::{OApi, OApiParameter, OApiResponse};
 use openapiv3::{Parameter, RequestBody, Response};
 use serde::Serialize;
-use serde_method::ResponseStructure;
+use serde_method::DataStructure;
 use simplelog::{
     debug, error, info, Color, ColorChoice, ConfigBuilder, Level, LevelFilter, TermLogger,
     TerminalMode,
@@ -68,17 +68,17 @@ struct EndpointExtracted {
     method: String,
     description: Option<String>,
     parameters: Vec<Parameter>,
-    request: Option<ResponseStructure>,
-    response: Option<ResponseStructure>,
-    flat_response: Vec<ResponseStructure>,
-    flat_request: Vec<ResponseStructure>,
+    request: Option<DataStructure>,
+    response: Option<DataStructure>,
+    flat_response: Vec<DataStructure>,
+    flat_request: Vec<DataStructure>,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
 struct TemplateData {
     endpoints: Vec<EndpointExtracted>,
-    responses: Vec<ResponseStructure>,
-    requests: Vec<ResponseStructure>,
+    responses: Vec<DataStructure>,
+    requests: Vec<DataStructure>,
 }
 
 impl TemplateData {
@@ -137,7 +137,7 @@ impl EndpointExtracted {
     }
 }
 
-fn flatten_responses(response: &ResponseStructure, responses: &mut Vec<ResponseStructure>) {
+fn flatten_responses(response: &DataStructure, responses: &mut Vec<DataStructure>) {
     if response.property_type == "Object" {
         if responses.contains(response) {
             return;
@@ -152,15 +152,6 @@ fn flatten_responses(response: &ResponseStructure, responses: &mut Vec<ResponseS
             flatten_responses(&property, responses);
         }
     }
-}
-
-#[derive(Debug, Clone)]
-struct OapiEndpoint {
-    path: String,
-    method: String,
-    description: String,
-    parameters: Vec<SparseSelector<OApiParameter>>,
-    response: Option<SparseSelector<OApiResponse>>,
 }
 
 fn terminal_setup(args: &GenerateArgs) -> anyhow::Result<()> {
@@ -284,7 +275,8 @@ fn generate(args: GenerateArgs) -> anyhow::Result<()> {
     tera.register_function("map_type", map_type_new(config.clone()));
     tera.register_function("extended", extended(config.extended.clone()));
     tera.register_function("exists", exists(config.extended));
-    let output = tera.render("service.dart", &Context::from_serialize(&template)?)?;
+    let context = Context::from_serialize(&template)?;
+    let output = tera.render("service.dart", &context)?;
 
     std::fs::write(args.output, output)?;
     Ok(())
@@ -315,10 +307,3 @@ fn find_files(path: &std::path::Path, extension: &OsStr) -> Vec<PathBuf> {
     }
     files
 }
-
-// /// Convert a value to lowercase.
-// pub fn nameify(value: &Value, _: &HashMap<String, Value>) -> Result<Value> {
-//     let s = try_get_value!("nameify", "value", String, value);
-
-//     Ok(to_value(s.to_lowercase()).unwrap())
-// }

@@ -91,7 +91,7 @@ fn extract_model(
     component_schemas: &IndexMap<String, ReferenceOr<Schema>>,
     name: &str,
     is_array: bool,
-) -> ResponseStructure {
+) -> DataStructure {
     match schema {
         ReferenceOr::Reference { reference } => {
             let name = reference.split("/").last().unwrap();
@@ -109,11 +109,11 @@ fn extract_model_from_schema(
     component_schemas: &IndexMap<String, ReferenceOr<Schema>>,
     name: &str,
     is_array: bool,
-) -> ResponseStructure {
+) -> DataStructure {
     match &schema.schema_kind {
         openapiv3::SchemaKind::Type(t) => match t {
             openapiv3::Type::String(str) => {
-                return ResponseStructure {
+                return DataStructure {
                     name: name.to_string(),
                     description: schema.schema_data.description.clone(),
                     format: match &str.format {
@@ -138,7 +138,7 @@ fn extract_model_from_schema(
                 };
             }
             openapiv3::Type::Number(num) => {
-                return ResponseStructure {
+                return DataStructure {
                     name: name.to_string(),
                     description: schema.schema_data.description.clone(),
                     format: match &num.format {
@@ -160,7 +160,7 @@ fn extract_model_from_schema(
                 };
             }
             openapiv3::Type::Integer(int) => {
-                return ResponseStructure {
+                return DataStructure {
                     name: name.to_string(),
                     description: schema.schema_data.description.clone(),
                     format: match &int.format {
@@ -182,7 +182,7 @@ fn extract_model_from_schema(
                 };
             }
             openapiv3::Type::Object(obj) => {
-                let mut response = ResponseStructure {
+                let mut response = DataStructure {
                     name: name.to_string(),
                     description: schema.schema_data.description.clone(),
                     format: None,
@@ -217,7 +217,7 @@ fn extract_model_from_schema(
                 return response;
             }
             openapiv3::Type::Array(arr) => {
-                let mut array = ResponseStructure {
+                let mut array = DataStructure {
                     name: name.to_string(),
                     description: schema.schema_data.description.clone(),
                     format: None,
@@ -248,7 +248,7 @@ fn extract_model_from_schema(
                 return array;
             }
             openapiv3::Type::Boolean {} => {
-                return ResponseStructure {
+                return DataStructure {
                     name: name.to_string(),
                     description: schema.schema_data.description.clone(),
                     format: None,
@@ -270,19 +270,19 @@ fn extract_model_from_schema(
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq, Deserialize)]
-pub struct ResponseStructure {
+pub struct DataStructure {
     pub name: String,
     pub description: Option<String>,
     pub format: Option<String>,
     pub required: bool,
-    pub properties: Vec<ResponseStructure>,
+    pub properties: Vec<DataStructure>,
     pub required_properties: Vec<String>,
     pub property_type: String,
     pub object_name: Option<String>,
     pub is_root: bool,
 }
 
-impl ResponseStructure {
+impl DataStructure {
     fn process_data(&mut self) {
         if self.property_type == "Array" {
             // println!("Array: {:?}", self);

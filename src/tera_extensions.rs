@@ -4,7 +4,7 @@ use tera::{from_value, to_value, Context, Function, Tera, Value};
 
 use crate::{
     config::{Config, Type},
-    serde_method::ResponseStructure,
+    serde_method::DataStructure,
 };
 
 pub fn extended(extended: HashMap<String, String>) -> impl Function {
@@ -86,7 +86,7 @@ pub fn map_type_new(config: Config) -> impl Function {
         move |args: &HashMap<String, Value>| -> tera::Result<Value> {
             match args.get("type") {
                 None => Err("Expect type to be set".into()),
-                Some(type_name) => match from_value::<ResponseStructure>(type_name.clone()) {
+                Some(type_name) => match from_value::<DataStructure>(type_name.clone()) {
                     Ok(v) => {
                         let openapi_type = if let Some(t) = v.object_name {
                             println!("Array {}", t);
