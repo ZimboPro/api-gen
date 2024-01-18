@@ -1,15 +1,3 @@
-// fn make_url_for(urls: BTreeMap<String, String>) -> impl Function {
-//     Box::new(move |args| -> Result<Value> {
-//         match args.get("name") {
-//             Some(val) => match from_value::<String>(val.clone()) {
-//                 Ok(v) => Ok(to_value(urls.get(&v).unwrap()).unwrap()),
-//                 Err(_) => Err("oops".into()),
-//             },
-//             None => Err("oops".into()),
-//         }
-//     })
-// }
-
 use std::collections::HashMap;
 
 use tera::{from_value, to_value, Context, Function, Tera, Value};
@@ -92,6 +80,7 @@ pub fn map_type(types: HashMap<String, Type>) -> impl Function {
     )
 }
 
+// TODO determine if better way (preprocess the mapped types)
 pub fn map_type_new(config: Config) -> impl Function {
     Box::new(
         move |args: &HashMap<String, Value>| -> tera::Result<Value> {
@@ -119,7 +108,9 @@ pub fn map_type_new(config: Config) -> impl Function {
                         };
                         if v.property_type == "Array" {
                             println!("Resulting Array {}", resulting_type);
-
+                            if !config.array_layout.contains("{type}") {
+                                return Err("'array_layout' must contain '{type}'".into());
+                            }
                             return Ok(to_value(
                                 config.array_layout.replace("{type}", resulting_type),
                             )

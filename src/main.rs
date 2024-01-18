@@ -262,6 +262,7 @@ fn generate(args: GenerateArgs) -> anyhow::Result<()> {
         error!("{}", e);
         return Err(anyhow::anyhow!("OpenAPI file not valid"));
     }
+
     let mut template = serde_openapi(contents)?;
     for e in &mut template.endpoints {
         e.flatten_requests();
@@ -269,13 +270,7 @@ fn generate(args: GenerateArgs) -> anyhow::Result<()> {
     }
     template.combine_requests();
     template.combine_responses();
-    if template
-        .responses
-        .iter()
-        .any(|x| x.name == "CreateTaskResponseV0")
-    {
-        println!("------------------");
-    }
+
     // sparse_openapi(doc)?;
     let mut tera = match Tera::new("templates/*.dart") {
         Ok(t) => t,
@@ -290,8 +285,8 @@ fn generate(args: GenerateArgs) -> anyhow::Result<()> {
     tera.register_function("extended", extended(config.extended.clone()));
     tera.register_function("exists", exists(config.extended));
     let output = tera.render("service.dart", &Context::from_serialize(&template)?)?;
-    // print!("{}", output);
-    std::fs::write("output.dart", output)?;
+
+    std::fs::write(args.output, output)?;
     Ok(())
 }
 
