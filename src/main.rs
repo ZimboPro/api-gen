@@ -1,6 +1,5 @@
 mod config;
 mod serde_method;
-mod sparse_method;
 mod tera_extensions;
 
 use std::{collections::HashMap, ffi::OsStr, path::PathBuf};
