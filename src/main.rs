@@ -4,7 +4,7 @@ mod tera_extensions;
 
 use std::{collections::HashMap, ffi::OsStr, path::PathBuf};
 
-use clap::Parser;
+use clap::{Args, Parser, Subcommand};
 use config::Type;
 use merge_yaml_hash::MergeYamlHash;
 use oapi::{OApi, OApiParameter, OApiResponse};
@@ -22,14 +22,34 @@ use tera_text_filters::register_all;
 
 use crate::{config::parse_config_file, serde_method::serde_openapi};
 
-#[derive(Debug, Parser)]
-struct Args {
+#[derive(Debug, Parser, PartialEq, Eq)]
+enum Commands {
+    /// Generate based off the template
+    Generate(GenerateArgs),
+    /// Output the markdown help page
+    #[command(hide = true)]
+    Markdown,
+    /// Initialize a new project
+    Init,
+}
+
+#[derive(Debug, Args, PartialEq, Eq)]
+struct GenerateArgs {
+    /// OpenAPI file(s) to generate from. It can be a folder
     #[clap(short, long)]
     api: PathBuf,
+    /// Output file
     #[clap(short, long)]
     output: PathBuf,
-    #[clap(short, long)]
+    /// Sets a custom config file
+    #[arg(short, long, value_name = "FILE")]
     config: Option<PathBuf>,
+    /// Verbose mode (-v, -vv, -vvv, etc.)
+    #[clap(short, long)]
+    verbose: bool,
+    /// Quiet mode, only displays warnings and errors
+    #[clap(short, long)]
+    quiet: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -143,8 +163,7 @@ struct OapiEndpoint {
     response: Option<SparseSelector<OApiResponse>>,
 }
 
-fn main() -> anyhow::Result<()> {
-    let args = Args::parse();
+fn terminal_setup(args: &GenerateArgs) -> anyhow::Result<()> {
     let config = ConfigBuilder::new()
         .set_level_color(Level::Debug, Some(Color::Cyan))
         .set_level_color(Level::Info, Some(Color::Blue))
@@ -154,17 +173,41 @@ fn main() -> anyhow::Result<()> {
         .set_time_level(LevelFilter::Off)
         .build();
 
+    if args.quiet && args.verbose {
+        return Err(anyhow::anyhow!(
+            "Cannot be quiet and verbose at the same time"
+        ));
+    }
+
+    let level = if args.quiet {
+        LevelFilter::Warn
+    } else if args.verbose {
+        LevelFilter::Debug
+    } else {
+        LevelFilter::Info
+    };
+
+    TermLogger::init(level, config, TerminalMode::Stdout, ColorChoice::Auto).unwrap();
+    Ok(())
+}
+
+fn main() -> anyhow::Result<()> {
+    let args = Commands::parse();
+
+    match args {
+        Commands::Generate(args) => generate(args),
+        Commands::Markdown => Ok(clap_markdown::print_help_markdown::<Commands>()),
+        Commands::Init => todo!(),
+    }
+}
+
+fn generate(args: GenerateArgs) -> anyhow::Result<()> {
+    terminal_setup(&args)?;
+
     if !args.api.exists() {
         return Err(anyhow::anyhow!("OpenAPI file(s) not found"));
     }
 
-    TermLogger::init(
-        LevelFilter::Info,
-        config,
-        TerminalMode::Stdout,
-        ColorChoice::Auto,
-    )
-    .unwrap();
     let mut contents = String::new();
     let t = if args.api.is_file() {
         let parent_path = args.api.parent().unwrap();
