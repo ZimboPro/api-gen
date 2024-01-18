@@ -8,6 +8,8 @@ authors = ["ZimboPro <dejagerleslie@gmail.com>"]
 [package.metadata.wix]
 upgrade-guid = "C886D675-B4B3-4D35-951F-FA4C5EBF7362"
 path-guid = "92041F80-38C0-4C8E-AD99-05484F86B9B7"
+license = false
+eula = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -37,7 +39,7 @@ lto = "thin"
 # Config for 'cargo dist'
 [workspace.metadata.dist]
 # The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.4.3"
+cargo-dist-version = "0.7.2"
 # CI backends to support
 ci = ["github"]
 # The installers to generate for each app
