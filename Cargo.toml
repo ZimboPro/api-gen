@@ -4,11 +4,15 @@ version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/ZimboPro/api-gen.git"
 authors = ["ZimboPro <dejagerleslie@gmail.com>"]
+license = "MIT"
+description = "Generate API code from OpenAPI 3.0 YAML files using templates"
+readme = "README.md"
+
 
 [package.metadata.wix]
 upgrade-guid = "C886D675-B4B3-4D35-951F-FA4C5EBF7362"
 path-guid = "92041F80-38C0-4C8E-AD99-05484F86B9B7"
-license = false
+license = true
 eula = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
