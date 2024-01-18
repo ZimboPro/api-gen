@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use tera::{from_value, to_value, Context, Function, Tera, Value};
+use tera::{from_value, to_value, Function, Value};
 
 use crate::{
     config::{Config, Type},
@@ -52,7 +52,7 @@ pub fn map_type(types: HashMap<String, Type>) -> impl Function {
                             from_value::<String>(format.clone()),
                         ) {
                             (Ok(type_name), Ok(format)) => Ok(to_value(
-                                &types
+                                types
                                     .get(&type_name)
                                     .unwrap()
                                     .format

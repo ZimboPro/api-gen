@@ -2,12 +2,12 @@ mod config;
 mod serde_method;
 mod tera_extensions;
 
-use std::{collections::HashMap, ffi::OsStr, path::PathBuf};
+use std::{ffi::OsStr, path::PathBuf};
 
-use clap::{Args, Parser, Subcommand};
-use config::Type;
+use clap::{Args, Parser};
+
 use merge_yaml_hash::MergeYamlHash;
-use oapi::{OApi, OApiParameter, OApiResponse};
+use oapi::OApi;
 use openapiv3::{Parameter, RequestBody, Response};
 use serde::Serialize;
 use serde_method::DataStructure;
@@ -15,9 +15,9 @@ use simplelog::{
     debug, error, info, Color, ColorChoice, ConfigBuilder, Level, LevelFilter, TermLogger,
     TerminalMode,
 };
-use sppparse::{SparseRoot, SparseSelector};
-use tera::{from_value, to_value, Context, Function, Tera, Value};
-use tera_extensions::{exists, extended, map_type, map_type_new};
+use sppparse::SparseRoot;
+use tera::{Context, Tera};
+use tera_extensions::{exists, extended, map_type_new};
 use tera_text_filters::register_all;
 
 use crate::{config::parse_config_file, serde_method::serde_openapi};
@@ -85,7 +85,7 @@ impl TemplateData {
     pub fn combine_responses(&mut self) {
         for endpoint in &self.endpoints {
             for response in &endpoint.flat_response {
-                if self.responses.contains(&response) {
+                if self.responses.contains(response) {
                     continue;
                 }
                 self.responses.push(response.clone());
@@ -95,7 +95,7 @@ impl TemplateData {
     pub fn combine_requests(&mut self) {
         for endpoint in &self.endpoints {
             for request in &endpoint.flat_request {
-                if self.requests.contains(&request) {
+                if self.requests.contains(request) {
                     continue;
                 }
                 self.requests.push(request.clone());
@@ -187,7 +187,10 @@ fn main() -> anyhow::Result<()> {
 
     match args {
         Commands::Generate(args) => generate(args),
-        Commands::Markdown => Ok(clap_markdown::print_help_markdown::<Commands>()),
+        Commands::Markdown => {
+            clap_markdown::print_help_markdown::<Commands>();
+            Ok(())
+        }
         Commands::Init => todo!(),
     }
 }

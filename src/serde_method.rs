@@ -94,7 +94,7 @@ fn extract_model(
 ) -> DataStructure {
     match schema {
         ReferenceOr::Reference { reference } => {
-            let name = reference.split("/").last().unwrap();
+            let name = reference.split('/').last().unwrap();
             let reference_schema = component_schemas.get(name).unwrap();
             extract_model(reference_schema, component_schemas, name, is_array)
         }
@@ -112,75 +112,63 @@ fn extract_model_from_schema(
 ) -> DataStructure {
     match &schema.schema_kind {
         openapiv3::SchemaKind::Type(t) => match t {
-            openapiv3::Type::String(str) => {
-                return DataStructure {
-                    name: name.to_string(),
-                    description: schema.schema_data.description.clone(),
-                    format: match &str.format {
-                        openapiv3::VariantOrUnknownOrEmpty::Item(item) => Some(match item {
-                            openapiv3::StringFormat::Date => "Date".to_string(),
-                            openapiv3::StringFormat::DateTime => "DateTime".to_string(),
-                            openapiv3::StringFormat::Password => "Password".to_string(),
-                            openapiv3::StringFormat::Byte => "Byte".to_string(),
-                            openapiv3::StringFormat::Binary => "Binary".to_string(),
-                        }),
-                        openapiv3::VariantOrUnknownOrEmpty::Unknown(format) => {
-                            Some(format.to_string())
-                        }
-                        openapiv3::VariantOrUnknownOrEmpty::Empty => None,
-                    },
-                    required: false,
-                    properties: Vec::new(),
-                    required_properties: Vec::new(),
-                    property_type: "String".to_string(),
-                    object_name: None,
-                    is_root: false,
-                };
-            }
-            openapiv3::Type::Number(num) => {
-                return DataStructure {
-                    name: name.to_string(),
-                    description: schema.schema_data.description.clone(),
-                    format: match &num.format {
-                        openapiv3::VariantOrUnknownOrEmpty::Item(item) => Some(match item {
-                            openapiv3::NumberFormat::Float => "Float".to_string(),
-                            openapiv3::NumberFormat::Double => "Double".to_string(),
-                        }),
-                        openapiv3::VariantOrUnknownOrEmpty::Unknown(format) => {
-                            Some(format.to_string())
-                        }
-                        openapiv3::VariantOrUnknownOrEmpty::Empty => None,
-                    },
-                    required: false,
-                    properties: Vec::new(),
-                    required_properties: Vec::new(),
-                    property_type: "Number".to_string(),
-                    object_name: None,
-                    is_root: false,
-                };
-            }
-            openapiv3::Type::Integer(int) => {
-                return DataStructure {
-                    name: name.to_string(),
-                    description: schema.schema_data.description.clone(),
-                    format: match &int.format {
-                        openapiv3::VariantOrUnknownOrEmpty::Item(item) => Some(match item {
-                            openapiv3::IntegerFormat::Int32 => "Int32".to_string(),
-                            openapiv3::IntegerFormat::Int64 => "Int64".to_string(),
-                        }),
-                        openapiv3::VariantOrUnknownOrEmpty::Unknown(format) => {
-                            Some(format.to_string())
-                        }
-                        openapiv3::VariantOrUnknownOrEmpty::Empty => None,
-                    },
-                    required: false,
-                    properties: Vec::new(),
-                    required_properties: Vec::new(),
-                    property_type: "Integer".to_string(),
-                    object_name: None,
-                    is_root: false,
-                };
-            }
+            openapiv3::Type::String(str) => DataStructure {
+                name: name.to_string(),
+                description: schema.schema_data.description.clone(),
+                format: match &str.format {
+                    openapiv3::VariantOrUnknownOrEmpty::Item(item) => Some(match item {
+                        openapiv3::StringFormat::Date => "Date".to_string(),
+                        openapiv3::StringFormat::DateTime => "DateTime".to_string(),
+                        openapiv3::StringFormat::Password => "Password".to_string(),
+                        openapiv3::StringFormat::Byte => "Byte".to_string(),
+                        openapiv3::StringFormat::Binary => "Binary".to_string(),
+                    }),
+                    openapiv3::VariantOrUnknownOrEmpty::Unknown(format) => Some(format.to_string()),
+                    openapiv3::VariantOrUnknownOrEmpty::Empty => None,
+                },
+                required: false,
+                properties: Vec::new(),
+                required_properties: Vec::new(),
+                property_type: "String".to_string(),
+                object_name: None,
+                is_root: false,
+            },
+            openapiv3::Type::Number(num) => DataStructure {
+                name: name.to_string(),
+                description: schema.schema_data.description.clone(),
+                format: match &num.format {
+                    openapiv3::VariantOrUnknownOrEmpty::Item(item) => Some(match item {
+                        openapiv3::NumberFormat::Float => "Float".to_string(),
+                        openapiv3::NumberFormat::Double => "Double".to_string(),
+                    }),
+                    openapiv3::VariantOrUnknownOrEmpty::Unknown(format) => Some(format.to_string()),
+                    openapiv3::VariantOrUnknownOrEmpty::Empty => None,
+                },
+                required: false,
+                properties: Vec::new(),
+                required_properties: Vec::new(),
+                property_type: "Number".to_string(),
+                object_name: None,
+                is_root: false,
+            },
+            openapiv3::Type::Integer(int) => DataStructure {
+                name: name.to_string(),
+                description: schema.schema_data.description.clone(),
+                format: match &int.format {
+                    openapiv3::VariantOrUnknownOrEmpty::Item(item) => Some(match item {
+                        openapiv3::IntegerFormat::Int32 => "Int32".to_string(),
+                        openapiv3::IntegerFormat::Int64 => "Int64".to_string(),
+                    }),
+                    openapiv3::VariantOrUnknownOrEmpty::Unknown(format) => Some(format.to_string()),
+                    openapiv3::VariantOrUnknownOrEmpty::Empty => None,
+                },
+                required: false,
+                properties: Vec::new(),
+                required_properties: Vec::new(),
+                property_type: "Integer".to_string(),
+                object_name: None,
+                is_root: false,
+            },
             openapiv3::Type::Object(obj) => {
                 let mut response = DataStructure {
                     name: name.to_string(),
@@ -200,7 +188,7 @@ fn extract_model_from_schema(
                 for (name, schema) in &obj.properties {
                     match schema {
                         ReferenceOr::Reference { reference } => {
-                            let name = reference.split("/").last().unwrap();
+                            let name = reference.split('/').last().unwrap();
                             let reference_schema = component_schemas.get(name).unwrap();
                             extract_model(reference_schema, component_schemas, name, false);
                         }
@@ -208,13 +196,13 @@ fn extract_model_from_schema(
                             response.properties.push(extract_model_from_schema(
                                 item.as_ref(),
                                 component_schemas,
-                                &name,
+                                name,
                                 false,
                             ));
                         }
                     }
                 }
-                return response;
+                response
             }
             openapiv3::Type::Array(arr) => {
                 let mut array = DataStructure {
@@ -231,7 +219,7 @@ fn extract_model_from_schema(
 
                 array.properties.push(match arr.items.as_ref().unwrap() {
                     ReferenceOr::Reference { reference } => {
-                        let name = reference.split("/").last().unwrap();
+                        let name = reference.split('/').last().unwrap();
                         let reference_schema = component_schemas.get(name).unwrap();
                         extract_model(reference_schema, component_schemas, name, false)
                     }
@@ -245,27 +233,25 @@ fn extract_model_from_schema(
                         )
                     }
                 });
-                return array;
+                array
             }
-            openapiv3::Type::Boolean {} => {
-                return DataStructure {
-                    name: name.to_string(),
-                    description: schema.schema_data.description.clone(),
-                    format: None,
-                    required: false,
-                    properties: Vec::new(),
-                    required_properties: Vec::new(),
-                    property_type: "Boolean".to_string(),
-                    object_name: None,
-                    is_root: false,
-                };
-            }
+            openapiv3::Type::Boolean {} => DataStructure {
+                name: name.to_string(),
+                description: schema.schema_data.description.clone(),
+                format: None,
+                required: false,
+                properties: Vec::new(),
+                required_properties: Vec::new(),
+                property_type: "Boolean".to_string(),
+                object_name: None,
+                is_root: false,
+            },
         },
-        openapiv3::SchemaKind::OneOf { one_of } => todo!("extract one of"),
-        openapiv3::SchemaKind::AllOf { all_of } => todo!("extract all of"),
-        openapiv3::SchemaKind::AnyOf { any_of } => todo!("extract any of"),
-        openapiv3::SchemaKind::Not { not } => todo!("extract not"),
-        openapiv3::SchemaKind::Any(any) => todo!("extract any"),
+        openapiv3::SchemaKind::OneOf { one_of: _ } => todo!("extract one of"),
+        openapiv3::SchemaKind::AllOf { all_of: _ } => todo!("extract all of"),
+        openapiv3::SchemaKind::AnyOf { any_of: _ } => todo!("extract any of"),
+        openapiv3::SchemaKind::Not { not: _ } => todo!("extract not"),
+        openapiv3::SchemaKind::Any(_any) => todo!("extract any"),
     }
 }
 
