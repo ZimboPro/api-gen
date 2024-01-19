@@ -269,7 +269,7 @@ fn generate(args: GenerateArgs) -> anyhow::Result<()> {
     let mut tera = match Tera::new("templates/*.dart") {
         Ok(t) => t,
         Err(e) => {
-            println!("Parsing error(s): {}", e);
+            error!("Parsing error(s): {}", e);
             ::std::process::exit(1);
         }
     };

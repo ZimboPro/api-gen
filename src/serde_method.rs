@@ -1,6 +1,6 @@
 use indexmap::IndexMap;
 use openapiv3::{ReferenceOr, Schema, StatusCode};
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Serialize};
 use simplelog::{debug, info};
 
 use crate::{Endpoint, EndpointExtracted, TemplateData};
@@ -43,6 +43,7 @@ pub fn serde_openapi(contents: String) -> anyhow::Result<TemplateData> {
     let mut template_data = TemplateData::default();
     info!("Extracting models");
     for endpoint in &endpoints {
+        debug!("Endpoint: {:#?}", endpoint);
         let mut new_endpoint: EndpointExtracted = endpoint.clone().into();
         if let Some(request) = &endpoint.request {
             let mut request = extract_model(
@@ -63,6 +64,7 @@ pub fn serde_openapi(contents: String) -> anyhow::Result<TemplateData> {
             if request.property_type == "Object" {
                 request.object_name = Some(request.name.clone());
             }
+            debug!("Request: {:#?}", request);
             new_endpoint.request = Some(request);
         }
         if let Some(response) = &endpoint.response {
@@ -78,6 +80,7 @@ pub fn serde_openapi(contents: String) -> anyhow::Result<TemplateData> {
                 if response.property_type == "Object" {
                     response.object_name = Some(response.name.clone());
                 }
+                debug!("Response: {:#?}", response);
                 new_endpoint.response = Some(response);
             }
         }
@@ -94,6 +97,7 @@ fn extract_model(
 ) -> DataStructure {
     match schema {
         ReferenceOr::Reference { reference } => {
+            debug!("Reference: {}", reference);
             let name = reference.split('/').last().unwrap();
             let reference_schema = component_schemas.get(name).unwrap();
             extract_model(reference_schema, component_schemas, name, is_array)
@@ -224,7 +228,7 @@ fn extract_model_from_schema(
                         extract_model(reference_schema, component_schemas, name, false)
                     }
                     ReferenceOr::Item(item) => {
-                        // println!("Array: {:?}", item);
+                        debug!("Array: {:#?}", item);
                         extract_model_from_schema(
                             item.as_ref(),
                             component_schemas,
@@ -271,7 +275,7 @@ pub struct DataStructure {
 impl DataStructure {
     fn process_data(&mut self) {
         if self.property_type == "Array" {
-            // println!("Array: {:?}", self);
+            debug!("Array: {:#?}", self);
             if !self.properties.is_empty() {
                 self.object_name = if let Some(name) = self.properties[0].object_name.clone() {
                     Some(name)
@@ -287,9 +291,6 @@ impl DataStructure {
                 property.required = true;
             }
             property.process_data();
-        }
-        if self.name == "StartCustomerChatRelayResponseV1" {
-            println!("StartCustomerChatRelayResponseV1: {:#?}\n", self);
         }
     }
 }

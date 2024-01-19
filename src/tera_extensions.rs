@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use simplelog::debug;
 use tera::{from_value, to_value, Function, Value};
 
 use crate::{
@@ -89,7 +90,7 @@ pub fn map_type_new(config: Config) -> impl Function {
                 Some(type_name) => match from_value::<DataStructure>(type_name.clone()) {
                     Ok(v) => {
                         let openapi_type = if let Some(t) = v.object_name {
-                            println!("Array {}", t);
+                            debug!("Array {}", t);
                             t
                         } else {
                             v.property_type.clone()
@@ -107,7 +108,7 @@ pub fn map_type_new(config: Config) -> impl Function {
                             None => &config.types.get(&v.property_type).unwrap().default,
                         };
                         if v.property_type == "Array" {
-                            println!("Resulting Array {}", resulting_type);
+                            debug!("Resulting Array {}", resulting_type);
                             if !config.array_layout.contains("{type}") {
                                 return Err("'array_layout' must contain '{type}'".into());
                             }
