@@ -13,6 +13,8 @@
 - [ ] Generate path parameter
 - [ ] Generate query parameter
 - [ ] Base url
+- [ ] Patterns
+- [ ] Validation rules (min, max, max length etc)
 
 ## Generation
 
