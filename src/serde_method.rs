@@ -1,6 +1,6 @@
 use indexmap::IndexMap;
 use openapiv3::{ReferenceOr, Schema, StatusCode};
-use serde::{de, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use simplelog::{debug, info};
 
 use crate::{Endpoint, EndpointExtracted, TemplateData};
