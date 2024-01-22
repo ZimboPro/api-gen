@@ -1,0 +1,35 @@
+# The configuration for the template engine.
+
+# The placeholder {type} needs to exist for the template engine to work.
+array_layout: List<{type}>
+# This is a map of types that can be used to map the types from the OpenAPI specification to the types of the target language.
+# The default value is used if no mapping is found for the type.
+# The value needs to updated to the appropriate type for the target language.
+types:
+    String:
+        default: String
+        # Custom formats are also supported
+        format:
+            Date: Date
+            DateTime: DateTime
+            Password: String
+            Byte: Byte
+            Binary: String
+            # An example of a custom format
+            # Email: String
+    Number:
+        default: double
+        format:
+            Float: float
+            Double: double
+    Integer:
+        default: Integer
+        format:
+            Int32: int
+            int64: int
+    Boolean:
+        default: bool
+# This is a map of key-value pairs that can be used to extend the configuration and inject custom data into the template engine
+# extended:
+#     feature: MyFancyFeature # An example of a custom key-value pair with the key "feature" and the value "MyFancyFeature"
+

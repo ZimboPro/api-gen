@@ -35,8 +35,8 @@
 ## Initialisation
 
 - [ ] init mode
-    - [ ] create config
-    - [ ] create templates dir
+    - [x] create config
+    - [x] create templates dir
     - [ ] generate templates based on lang/option
 
 ## Config
