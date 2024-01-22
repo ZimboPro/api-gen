@@ -109,9 +109,6 @@ pub fn map_type_new(config: Config) -> impl Function {
                         };
                         if v.property_type == "Array" {
                             debug!("Resulting Array {}", resulting_type);
-                            if !config.array_layout.contains("{type}") {
-                                return Err("'array_layout' must contain '{type}'".into());
-                            }
                             return Ok(to_value(
                                 config.array_layout.replace("{type}", resulting_type),
                             )

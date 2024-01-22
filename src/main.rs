@@ -1,4 +1,5 @@
 mod config;
+mod init;
 mod serde_method;
 mod tera_extensions;
 
@@ -6,6 +7,7 @@ use std::{ffi::OsStr, path::PathBuf};
 
 use clap::{Args, Parser};
 
+use init::init;
 use merge_yaml_hash::MergeYamlHash;
 use oapi::OApi;
 use openapiv3::{Parameter, RequestBody, Response};
@@ -191,7 +193,7 @@ fn main() -> anyhow::Result<()> {
             clap_markdown::print_help_markdown::<Commands>();
             Ok(())
         }
-        Commands::Init => todo!(),
+        Commands::Init => init(),
     }
 }
 
@@ -275,6 +277,7 @@ fn generate(args: GenerateArgs) -> anyhow::Result<()> {
     };
     register_all(&mut tera);
     let config = parse_config_file(args.config)?;
+    config.validate()?;
     tera.register_function("map_type", map_type_new(config.clone()));
     tera.register_function("extended", extended(config.extended.clone()));
     tera.register_function("exists", exists(config.extended));

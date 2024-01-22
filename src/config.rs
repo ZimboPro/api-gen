@@ -11,6 +11,23 @@ pub struct Config {
     pub array_layout: String,
 }
 
+impl Config {
+    pub fn validate(&self) -> anyhow::Result<()> {
+        if self.types.is_empty() {
+            return Err(anyhow::anyhow!("Types cannot be empty"));
+        }
+        if self.array_layout.is_empty() {
+            return Err(anyhow::anyhow!("Array layout cannot be empty"));
+        }
+        if !self.array_layout.contains("{type}") {
+            return Err(anyhow::anyhow!(
+                "Array layout must contain '{{type}}' placeholder"
+            ));
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Type {
     pub default: String,
