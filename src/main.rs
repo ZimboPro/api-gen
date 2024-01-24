@@ -275,8 +275,8 @@ fn get_open_api_content_and_doc(api: &PathBuf) -> anyhow::Result<String> {
             SparseRoot::new_from_file(path)
         }
     } else {
-        let mut files = find_files(&api, OsStr::new("yml"));
-        files.append(&mut find_files(&api, OsStr::new("yaml")));
+        let mut files = find_files(api, OsStr::new("yml"));
+        files.append(&mut find_files(api, OsStr::new("yaml")));
         let mut content = Vec::new();
         for file in files {
             content.push(std::fs::read_to_string(file)?);
@@ -352,7 +352,7 @@ fn generate(args: GenerateArgs) -> anyhow::Result<()> {
     // }
 
     let template_dir = Path::new("templates");
-    let files = get_files(&template_dir);
+    let files = get_files(template_dir);
 
     for file in files {
         let file_name = file.file_name().unwrap().to_str().unwrap();
@@ -360,17 +360,11 @@ fn generate(args: GenerateArgs) -> anyhow::Result<()> {
             // Renders all models and outputs multiple files
             info!("Rendering model files");
             for request in &template.requests {
-                generate_model_file(
-                    &request,
-                    &config.clone(),
-                    &mut tera,
-                    &args.output,
-                    file_name,
-                )?;
+                generate_model_file(request, &config.clone(), &mut tera, &args.output, file_name)?;
             }
             for response in &template.responses {
                 generate_model_file(
-                    &response,
+                    response,
                     &config.clone(),
                     &mut tera,
                     &args.output,
@@ -425,7 +419,7 @@ fn generate_model_file(
     file_name: &str,
 ) -> anyhow::Result<()> {
     if structure.name != "Array" {
-        let mut model_context = Context::from_serialize(&structure)?;
+        let mut model_context = Context::from_serialize(structure)?;
         let output_file_name =
             tera.render_str(&config.model_file_name.clone().unwrap(), &model_context)?;
         debug!("Generated file name: {:#?}", output_file_name);
@@ -446,14 +440,13 @@ fn generate_endpoint_model_file(
     output_folder: &PathBuf,
     file_name: &str,
 ) -> anyhow::Result<()> {
-    // TODO search for the root model instead
     let root = structure.iter().find(|x| x.is_root).unwrap();
     // TODO cater for nested arrays
     if root.property_type == "Array" && root.properties[0].property_type != "Object" {
         // Array of primitives
         return Ok(());
     }
-    let root_model_context = Context::from_serialize(&root)?;
+    let root_model_context = Context::from_serialize(root)?;
     let output_file_name = tera.render_str(
         &config.model_file_name.clone().unwrap(),
         &root_model_context,
@@ -463,7 +456,7 @@ fn generate_endpoint_model_file(
     context.insert("file_name", &output_file_name);
     context.insert("models", &structure);
     let output = tera.render(file_name, &context)?;
-    std::fs::write(&output_folder.join(output_file_name), output)?;
+    std::fs::write(output_folder.join(output_file_name), output)?;
     Ok(())
 }
 
