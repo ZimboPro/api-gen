@@ -32,4 +32,5 @@ types:
 # This is a map of key-value pairs that can be used to extend the configuration and inject custom data into the template engine
 # extended:
 #     feature: MyFancyFeature # An example of a custom key-value pair with the key "feature" and the value "MyFancyFeature"
-
+# The name of the file that will be generated for each model. It is to be paired with the reserved `model` and `model-endpoint` files
+modelFileName: "{{object_name | snake_case}}.dart"
