@@ -10,6 +10,7 @@ use std::{
 
 use clap::{Args, Parser};
 
+use config::Config;
 use init::init;
 use merge_yaml_hash::MergeYamlHash;
 use oapi::OApi;
@@ -17,7 +18,7 @@ use openapiv3::{Parameter, RequestBody, Response};
 use serde::Serialize;
 use serde_method::DataStructure;
 use simplelog::{
-    debug, error, info, Color, ColorChoice, ConfigBuilder, Level, LevelFilter, TermLogger,
+    debug, error, info, warn, Color, ColorChoice, ConfigBuilder, Level, LevelFilter, TermLogger,
     TerminalMode,
 };
 use sppparse::SparseRoot;
@@ -36,7 +37,7 @@ enum Commands {
     Markdown,
     /// Initialize a new project
     Init,
-    /// Outputs the context as
+    /// Outputs the context as JSON
     Context(ContextGenerateArgs),
 }
 
@@ -331,7 +332,7 @@ fn generate(args: GenerateArgs) -> anyhow::Result<()> {
     config.validate()?;
     tera.register_function("map_type", map_type_new(config.clone()));
     tera.register_function("extended", extended(config.extended.clone()));
-    tera.register_function("exists", exists(config.extended));
+    tera.register_function("exists", exists(config.extended.clone()));
     let context = Context::from_serialize(&template)?;
     // TODO render all files in dir
     // General render section
@@ -359,17 +360,49 @@ fn generate(args: GenerateArgs) -> anyhow::Result<()> {
             // Renders all models and outputs multiple files
             info!("Rendering model files");
             for request in &template.requests {
-                if request.name != "Array" {
-                    let mut model_context = Context::from_serialize(&request)?;
-                    let output_file_name =
-                        tera.render_str(&config.model_file_name.clone().unwrap(), &model_context)?;
-                    debug!("Generated file name: {:#?}", output_file_name);
-                    model_context.insert("file_name", &output_file_name);
-                    debug!("Context prepared: {:#?}", model_context);
-                    let output = tera.render(file_name, &model_context)?;
-                    debug!("Output rendered");
-                    // TODO retain folder structure
-                    std::fs::write(args.output.join(output_file_name), output)?;
+                generate_model_file(
+                    &request,
+                    &config.clone(),
+                    &mut tera,
+                    &args.output,
+                    file_name,
+                )?;
+            }
+            for response in &template.responses {
+                generate_model_file(
+                    &response,
+                    &config.clone(),
+                    &mut tera,
+                    &args.output,
+                    file_name,
+                )?;
+            }
+        } else if file_name.starts_with("model-endpoint.") {
+            // Renders all models and outputs multiple files
+            info!("Rendering model files");
+            for endpoint in &template.endpoints {
+                if !endpoint.flat_request.is_empty() && config.model_file_name.is_some() {
+                    generate_endpoint_model_file(
+                        &endpoint.flat_request,
+                        &config,
+                        &mut tera,
+                        &args.output,
+                        file_name,
+                    )?;
+                } else if !endpoint.flat_request.is_empty() && config.model_file_name.is_none() {
+                    warn!("modelFileName is not set in config")
+                }
+                if !endpoint.flat_response.is_empty() && config.model_file_name.is_some() {
+                    generate_endpoint_model_file(
+                        &endpoint.flat_response,
+                        &config,
+                        &mut tera,
+                        &args.output,
+                        file_name,
+                    )?;
+                    // TODO setup a default is not set?
+                } else if !endpoint.flat_response.is_empty() && config.model_file_name.is_none() {
+                    warn!("modelFileName is not set in config")
                 }
             }
         } else {
@@ -381,36 +414,56 @@ fn generate(args: GenerateArgs) -> anyhow::Result<()> {
             std::fs::write(&args.output.join(file.file_name().unwrap()), output)?;
         }
     }
+    Ok(())
+}
 
-    // for file in files {
-    //     let file_name = file.file_name().unwrap().to_str().unwrap();
-    //     if file_name.starts_with("model.") {
-    //         for request in &template.requests {
-    //             if request.name != "Array" {
-    //                 let name = if let Some(file_name_template) = config.model_file_name {
-    //                     let mut context = Context::from_serialize(&request)?;
-    //                     context.insert("file_name", &name);
-    //                     tera.render_str(&file_name_template, &context)?;
-    //                 } else {
-    //                     file_name
-    //                 };
-    //                 let name = tera.render_str(
-    //                     &config
-    //                         .model_file_name
-    //                         .clone()
-    //                         .unwrap_or(file_name.to_owned()),
-    //                     &context,
-    //                 )?;
-    //                 let output = tera.render(file, &context)?;
-    //                 std::fs::write(args.output.join(name), output)?;
-    //             }
-    //         }
-    //     } else {
-    //         let output = tera.render(file_name, &context)?;
-    //         std::fs::write(&args.output.join(file.file_name().unwrap()), output)?;
-    //     }
-    // }
-    // let parent = args.output.parent().unwrap();
+fn generate_model_file(
+    structure: &DataStructure,
+    config: &Config,
+    tera: &mut Tera,
+    output_folder: &PathBuf,
+    file_name: &str,
+) -> anyhow::Result<()> {
+    if structure.name != "Array" {
+        let mut model_context = Context::from_serialize(&structure)?;
+        let output_file_name =
+            tera.render_str(&config.model_file_name.clone().unwrap(), &model_context)?;
+        debug!("Generated file name: {:#?}", output_file_name);
+        model_context.insert("file_name", &output_file_name);
+        debug!("Context prepared: {:#?}", model_context);
+        let output = tera.render(file_name, &model_context)?;
+        debug!("Output rendered");
+        // TODO retain folder structure
+        std::fs::write(output_folder.join(output_file_name), output)?;
+    }
+    Ok(())
+}
+
+fn generate_endpoint_model_file(
+    structure: &Vec<DataStructure>,
+    config: &Config,
+    tera: &mut Tera,
+    output_folder: &PathBuf,
+    file_name: &str,
+) -> anyhow::Result<()> {
+    // TODO search for the root model instead
+    let root = structure.iter().find(|x| x.is_root).unwrap();
+    // TODO cater for nested arrays
+    if root.property_type == "Array" && root.properties[0].property_type != "Object" {
+        // Array of primitives
+        return Ok(());
+    }
+    let root_model_context = Context::from_serialize(&root)?;
+    let output_file_name = tera.render_str(
+        &config.model_file_name.clone().unwrap(),
+        &root_model_context,
+    )?;
+    debug!("Generated file name: {:#?}", output_file_name);
+    let mut context = Context::default();
+    context.insert("file_name", &output_file_name);
+    context.insert("models", &structure);
+    let output = tera.render(file_name, &context)?;
+    std::fs::write(&output_folder.join(output_file_name), output)?;
     Ok(())
 }
 
