@@ -1,4 +1,5 @@
-array_layout: List<{type}>
+arrayLayout: List<{type}>
+modelFileName: "{{object_name | snake_case}}.dart"
 types:
     String:
         default: String
