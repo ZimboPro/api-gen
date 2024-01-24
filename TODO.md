@@ -6,6 +6,7 @@
 - [ ] Unit tests
 - [ ] Determine if there is a better way to map types (preprocess the mapped types?)
 - [ ] Document/Generate available data in the context
+- [ ] Self update
 
 ## Data to be extracted/generated from OpenAPI
 
@@ -44,3 +45,10 @@
 - [x] Config
     - [x] Property typing
     - [x] Extended data
+
+## Templates
+
+- [ ] Query parameters example
+- [ ] Rust example
+- [ ] TS example
+- [ ] Python example
