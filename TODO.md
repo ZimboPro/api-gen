@@ -21,11 +21,11 @@
 - [ ] Test different scenarios
     - [x] Array of strings
 - [x] Specify output
-- [ ] Generate multiple templates
-- [ ] Generate multiple output files
-    - [ ] classes/models
-        - [ ] if model template exists
-        - [ ] file names
+- [x] Generate multiple templates
+- [x] Generate multiple output files
+    - [x] classes/models
+        - [x] if model template exists
+        - [x] file names
 - [ ] Tera macros
     - [ ] Property layout
     - [ ] Array layout
@@ -41,6 +41,6 @@
 
 ## Config
 
-- [ ] Config
+- [x] Config
     - [x] Property typing
     - [x] Extended data

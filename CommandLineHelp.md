@@ -7,6 +7,7 @@ This document contains the help content for the `api-gen` command-line program.
 * [`api-gen`↴](#api-gen)
 * [`api-gen generate`↴](#api-gen-generate)
 * [`api-gen init`↴](#api-gen-init)
+* [`api-gen context`↴](#api-gen-context)
 
 ## `api-gen`
 
@@ -16,6 +17,7 @@ This document contains the help content for the `api-gen` command-line program.
 
 * `generate` — Generate based off the template
 * `init` — Initialize a new project
+* `context` — Outputs the context as JSON
 
 
 
@@ -40,6 +42,21 @@ Generate based off the template
 Initialize a new project
 
 **Usage:** `api-gen init`
+
+
+
+## `api-gen context`
+
+Outputs the context as JSON
+
+**Usage:** `api-gen context [OPTIONS] --api <API>`
+
+###### **Options:**
+
+* `-a`, `--api <API>` — OpenAPI file(s) to generate from. It can be a folder
+* `-c`, `--config <FILE>` — Sets a custom config file
+* `-v`, `--verbose` — Verbose mode (-v, -vv, -vvv, etc.)
+* `-q`, `--quiet` — Quiet mode, only displays warnings and errors
 
 
 
