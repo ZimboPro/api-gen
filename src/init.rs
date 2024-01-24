@@ -9,6 +9,7 @@ lazy_static! {
     static ref SERVICE_FILE_NAME: std::path::PathBuf = PathBuf::from("service.template");
     static ref TEMPLATE_FOLDER_NAME: std::path::PathBuf = PathBuf::from("templates");
 }
+// TODO use include_dir instead
 const CONFIG_FILE: &str = include_str!("../config_data/config.yaml");
 const MODEL_FILE: &str = include_str!("../config_data/model.template");
 const SERVICE_FILE: &str = include_str!("../config_data/service.template");

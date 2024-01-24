@@ -3,7 +3,10 @@ mod init;
 mod serde_method;
 mod tera_extensions;
 
-use std::{ffi::OsStr, path::PathBuf};
+use std::{
+    ffi::OsStr,
+    path::{Path, PathBuf},
+};
 
 use clap::{Args, Parser};
 
@@ -33,8 +36,11 @@ enum Commands {
     Markdown,
     /// Initialize a new project
     Init,
+    /// Outputs the context as
+    Context(ContextGenerateArgs),
 }
 
+// TODO implement validation method
 #[derive(Debug, Args, PartialEq, Eq)]
 struct GenerateArgs {
     /// OpenAPI file(s) to generate from. It can be a folder
@@ -43,6 +49,22 @@ struct GenerateArgs {
     /// Output file
     #[clap(short, long)]
     output: PathBuf,
+    /// Sets a custom config file
+    #[arg(short, long, value_name = "FILE")]
+    config: Option<PathBuf>,
+    /// Verbose mode (-v, -vv, -vvv, etc.)
+    #[clap(short, long)]
+    verbose: bool,
+    /// Quiet mode, only displays warnings and errors
+    #[clap(short, long)]
+    quiet: bool,
+}
+
+#[derive(Debug, Args, PartialEq, Eq)]
+struct ContextGenerateArgs {
+    /// OpenAPI file(s) to generate from. It can be a folder
+    #[clap(short, long)]
+    api: PathBuf,
     /// Sets a custom config file
     #[arg(short, long, value_name = "FILE")]
     config: Option<PathBuf>,
@@ -156,7 +178,7 @@ fn flatten_responses(response: &DataStructure, responses: &mut Vec<DataStructure
     }
 }
 
-fn terminal_setup(args: &GenerateArgs) -> anyhow::Result<()> {
+fn terminal_setup(quiet: bool, verbose: bool) -> anyhow::Result<()> {
     let config = ConfigBuilder::new()
         .set_level_color(Level::Debug, Some(Color::Cyan))
         .set_level_color(Level::Info, Some(Color::Blue))
@@ -166,15 +188,15 @@ fn terminal_setup(args: &GenerateArgs) -> anyhow::Result<()> {
         .set_time_level(LevelFilter::Off)
         .build();
 
-    if args.quiet && args.verbose {
+    if quiet && verbose {
         return Err(anyhow::anyhow!(
             "Cannot be quiet and verbose at the same time"
         ));
     }
 
-    let level = if args.quiet {
+    let level = if quiet {
         LevelFilter::Warn
-    } else if args.verbose {
+    } else if verbose {
         LevelFilter::Debug
     } else {
         LevelFilter::Info
@@ -194,25 +216,41 @@ fn main() -> anyhow::Result<()> {
             Ok(())
         }
         Commands::Init => init(),
+        Commands::Context(args) => generate_context(args),
     }
 }
 
-fn generate(args: GenerateArgs) -> anyhow::Result<()> {
-    terminal_setup(&args)?;
-
+fn generate_context(args: ContextGenerateArgs) -> anyhow::Result<()> {
+    terminal_setup(args.quiet, args.verbose)?;
     if !args.api.exists() {
         return Err(anyhow::anyhow!("OpenAPI file(s) not found"));
     }
+    let contents = get_open_api_content_and_doc(&args.api)?;
 
+    let mut template = serde_openapi(contents)?;
+    for e in &mut template.endpoints {
+        e.flatten_requests();
+        e.flatten_responses();
+    }
+    template.combine_requests();
+    template.combine_responses();
+    let mut tera = Tera::default();
+    let context = Context::from_serialize(&template)?;
+    let output = tera.render_str("{{ __tera_context }}", &context)?;
+    std::fs::write("context.json", output)?;
+    Ok(())
+}
+
+fn get_open_api_content_and_doc(api: &PathBuf) -> anyhow::Result<String> {
     let mut contents = String::new();
-    let t = if args.api.is_file() {
-        let parent_path = args.api.parent().unwrap();
+    let t = if api.is_file() {
+        let parent_path = api.parent().unwrap();
         let shared_yml = parent_path.join("shared_models.yml");
         let shared_yaml = parent_path.join("shared_models.yaml");
         if shared_yml.exists() {
             info!("Merging with shared_models.yml OpenAPI document");
             let content = vec![
-                std::fs::read_to_string(args.api)?,
+                std::fs::read_to_string(api)?,
                 std::fs::read_to_string(shared_yml)?,
             ];
             contents = merge(content);
@@ -222,7 +260,7 @@ fn generate(args: GenerateArgs) -> anyhow::Result<()> {
         } else if shared_yaml.exists() {
             info!("Merging with shared_models.yaml OpenAPI document");
             let content = vec![
-                std::fs::read_to_string(args.api)?,
+                std::fs::read_to_string(api)?,
                 std::fs::read_to_string(shared_yml)?,
             ];
             contents = merge(content);
@@ -230,14 +268,14 @@ fn generate(args: GenerateArgs) -> anyhow::Result<()> {
             info!("Parsing OpenAPI document");
             SparseRoot::new_from_file(merged_file.path().to_path_buf())
         } else {
-            let path = std::env::current_dir().unwrap().join(args.api);
+            let path = std::env::current_dir().unwrap().join(api);
             contents = std::fs::read_to_string(path.clone())?;
             info!("Parsing OpenAPI document");
             SparseRoot::new_from_file(path)
         }
     } else {
-        let mut files = find_files(&args.api, OsStr::new("yml"));
-        files.append(&mut find_files(&args.api, OsStr::new("yaml")));
+        let mut files = find_files(&api, OsStr::new("yml"));
+        files.append(&mut find_files(&api, OsStr::new("yaml")));
         let mut content = Vec::new();
         for file in files {
             content.push(std::fs::read_to_string(file)?);
@@ -258,6 +296,17 @@ fn generate(args: GenerateArgs) -> anyhow::Result<()> {
         error!("{}", e);
         return Err(anyhow::anyhow!("OpenAPI file not valid"));
     }
+    Ok(contents)
+}
+
+fn generate(args: GenerateArgs) -> anyhow::Result<()> {
+    terminal_setup(args.quiet, args.verbose)?;
+
+    if !args.api.exists() {
+        return Err(anyhow::anyhow!("OpenAPI file(s) not found"));
+    }
+
+    let contents = get_open_api_content_and_doc(&args.api)?;
 
     let mut template = serde_openapi(contents)?;
     for e in &mut template.endpoints {
@@ -268,7 +317,9 @@ fn generate(args: GenerateArgs) -> anyhow::Result<()> {
     template.combine_responses();
 
     // sparse_openapi(doc)?;
-    let mut tera = match Tera::new("templates/*.dart") {
+    // TODO template dir and files
+    let mut tera = match Tera::new("templates/**/*.*") {
+        // TODO templates part of config or default
         Ok(t) => t,
         Err(e) => {
             error!("Parsing error(s): {}", e);
@@ -282,10 +333,105 @@ fn generate(args: GenerateArgs) -> anyhow::Result<()> {
     tera.register_function("extended", extended(config.extended.clone()));
     tera.register_function("exists", exists(config.extended));
     let context = Context::from_serialize(&template)?;
-    let output = tera.render("service.dart", &context)?;
+    // TODO render all files in dir
+    // General render section
+    // let output = tera.render("service.dart", &context)?;
+    // std::fs::write(&args.output, output)?;
+    // // Model section with multiple outputs
+    // let parent = args.output.parent().unwrap();
+    // for request in &template.requests {
+    //     if request.name != "Array" {
+    //         let output_file_name =
+    //             tera.render_str(&config.model_file_name.clone().unwrap(), &context)?;
+    //         let mut context = Context::from_serialize(&request)?;
+    //         context.insert("file_name", &output_file_name);
+    //         let output = tera.render("model.dart", &context)?;
+    //         std::fs::write(parent.join(output_file_name), output)?;
+    //     }
+    // }
 
-    std::fs::write(args.output, output)?;
+    let template_dir = Path::new("templates");
+    let files = get_files(&template_dir);
+
+    for file in files {
+        let file_name = file.file_name().unwrap().to_str().unwrap();
+        if file_name.starts_with("model.") {
+            // Renders all models and outputs multiple files
+            info!("Rendering model files");
+            for request in &template.requests {
+                if request.name != "Array" {
+                    let mut model_context = Context::from_serialize(&request)?;
+                    let output_file_name =
+                        tera.render_str(&config.model_file_name.clone().unwrap(), &model_context)?;
+                    debug!("Generated file name: {:#?}", output_file_name);
+                    model_context.insert("file_name", &output_file_name);
+                    debug!("Context prepared: {:#?}", model_context);
+                    let output = tera.render(file_name, &model_context)?;
+                    debug!("Output rendered");
+                    // TODO retain folder structure
+                    std::fs::write(args.output.join(output_file_name), output)?;
+                }
+            }
+        } else {
+            // Normal file render with full context
+            info!("Rendering file {:?}", file_name);
+            let mut file_context = context.clone();
+            file_context.insert("file_name", &file_name);
+            let output = tera.render(file_name, &file_context)?;
+            std::fs::write(&args.output.join(file.file_name().unwrap()), output)?;
+        }
+    }
+
+    // for file in files {
+    //     let file_name = file.file_name().unwrap().to_str().unwrap();
+    //     if file_name.starts_with("model.") {
+    //         for request in &template.requests {
+    //             if request.name != "Array" {
+    //                 let name = if let Some(file_name_template) = config.model_file_name {
+    //                     let mut context = Context::from_serialize(&request)?;
+    //                     context.insert("file_name", &name);
+    //                     tera.render_str(&file_name_template, &context)?;
+    //                 } else {
+    //                     file_name
+    //                 };
+    //                 let name = tera.render_str(
+    //                     &config
+    //                         .model_file_name
+    //                         .clone()
+    //                         .unwrap_or(file_name.to_owned()),
+    //                     &context,
+    //                 )?;
+    //                 let output = tera.render(file, &context)?;
+    //                 std::fs::write(args.output.join(name), output)?;
+    //             }
+    //         }
+    //     } else {
+    //         let output = tera.render(file_name, &context)?;
+    //         std::fs::write(&args.output.join(file.file_name().unwrap()), output)?;
+    //     }
+    // }
+    // let parent = args.output.parent().unwrap();
     Ok(())
+}
+
+fn get_files(path: &Path) -> Vec<PathBuf> {
+    let mut files = Vec::new();
+    for entry in path.read_dir().unwrap().flatten() {
+        if entry.path().is_dir() {
+            files.append(&mut get_files(&entry.path()));
+        } else if entry.path().is_file()
+            && !entry
+                .path()
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .starts_with('_')
+        {
+            files.push(entry.path().clone());
+        }
+    }
+    files
 }
 
 fn merge(files: Vec<String>) -> String {

@@ -8,7 +8,10 @@ pub struct Config {
     pub types: HashMap<String, Type>,
     #[serde(default)]
     pub extended: HashMap<String, String>,
+    #[serde(rename = "arrayLayout")]
     pub array_layout: String,
+    #[serde(default, rename = "modelFileName")]
+    pub model_file_name: Option<String>,
 }
 
 impl Config {
