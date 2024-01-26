@@ -6,6 +6,9 @@ There is still quite a lot to do make it feature complete but it can already hel
 
 To see the list of to do features visit [TODO.md](TODO.md) (The list will probably not be an exhaustive list)
 
+## NOTE
+
+Currently it only supports OpenAPI v3.0.x
 
 ## Usage
 

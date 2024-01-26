@@ -415,7 +415,7 @@ fn generate_model_file(
     structure: &DataStructure,
     config: &Config,
     tera: &mut Tera,
-    output_folder: &PathBuf,
+    output_folder: &Path,
     file_name: &str,
 ) -> anyhow::Result<()> {
     if structure.name != "Array" {
@@ -437,7 +437,7 @@ fn generate_endpoint_model_file(
     structure: &Vec<DataStructure>,
     config: &Config,
     tera: &mut Tera,
-    output_folder: &PathBuf,
+    output_folder: &Path,
     file_name: &str,
 ) -> anyhow::Result<()> {
     let root = structure.iter().find(|x| x.is_root).unwrap();
