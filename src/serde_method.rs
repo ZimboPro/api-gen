@@ -40,8 +40,10 @@ pub fn serde_openapi(contents: String) -> anyhow::Result<TemplateData> {
         }
     }
     let component_schemas = doc.components.unwrap().schemas;
-    let mut template_data = TemplateData::default();
-    template_data.base_url = doc.servers.iter().map(|x| x.url.clone()).collect();
+    let mut template_data = TemplateData {
+        base_url: doc.servers.iter().map(|x| x.url.clone()).collect(),
+        ..Default::default()
+    };
     info!("Extracting models");
     for endpoint in &endpoints {
         debug!("Endpoint: {:#?}", endpoint);
@@ -138,8 +140,8 @@ fn extract_model_from_schema(
                 object_name: None,
                 is_root: false,
                 pattern: str.pattern.clone(),
-                min_length: str.min_length.map(|x| x.into()),
-                max_length: str.max_length.map(|x| x.into()),
+                min_length: str.min_length,
+                max_length: str.max_length,
                 ..Default::default()
             },
             openapiv3::Type::Number(num) => DataStructure {
@@ -235,8 +237,8 @@ fn extract_model_from_schema(
                     object_name: None,
                     is_root: false,
                     pattern: None,
-                    min_length: arr.min_items.map(|x| x.into()),
-                    max_length: arr.max_items.map(|x| x.into()),
+                    min_length: arr.min_items,
+                    max_length: arr.max_items,
                     ..Default::default()
                 };
 

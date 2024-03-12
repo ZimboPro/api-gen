@@ -4,7 +4,7 @@ use simplelog::debug;
 use tera::{from_value, to_value, Function, Value};
 
 use crate::{
-    config::{self, Config, Type},
+    config::{Config, Type},
     serde_method::DataStructure,
 };
 
@@ -151,17 +151,16 @@ fn data_structure_to_json(data_structure: &DataStructure, config: &Config) -> se
             for property in &data_structure.properties {
                 map.insert(
                     property.name.clone(),
-                    data_structure_to_json(&property, config),
+                    data_structure_to_json(property, config),
                 );
             }
             serde_json::Value::Object(map)
         }
         "Array" => {
-            let mut vec = Vec::new();
-            vec.push(data_structure_to_json(
+            let vec = vec![data_structure_to_json(
                 &data_structure.properties[0],
                 config,
-            ));
+            )];
             serde_json::Value::Array(vec)
         }
         "String" => property_to_type(

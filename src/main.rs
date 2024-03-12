@@ -5,7 +5,7 @@ mod tera_extensions;
 
 use std::{
     ffi::OsStr,
-    ops::{Add, AddAssign},
+    ops::AddAssign,
     path::{Path, PathBuf},
 };
 
