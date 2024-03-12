@@ -4,7 +4,7 @@ use simplelog::debug;
 use tera::{from_value, to_value, Function, Value};
 
 use crate::{
-    config::{Config, Type},
+    config::{self, Config, Type},
     serde_method::DataStructure,
 };
 
@@ -95,6 +95,7 @@ pub fn map_type_new(config: Config) -> impl Function {
                         } else {
                             v.property_type.clone()
                         };
+                        debug!("Property Type {}", v.property_type);
                         let resulting_type = match v.format {
                             Some(format) => config
                                 .types
@@ -121,4 +122,85 @@ pub fn map_type_new(config: Config) -> impl Function {
             }
         },
     )
+}
+
+pub fn json_response(config: Config) -> impl Function {
+    Box::new(
+        move |args: &HashMap<String, Value>| -> tera::Result<Value> {
+            match args.get("response") {
+                None => Err("Expect value to be set".into()),
+                Some(type_name) => match from_value::<DataStructure>(type_name.clone()) {
+                    Ok(v) => {
+                        if v.is_root {
+                            Ok(data_structure_to_json(&v, &config))
+                        } else {
+                            Err("Expected the root object".into())
+                        }
+                    }
+                    Err(_) => Err("oops".into()),
+                },
+            }
+        },
+    )
+}
+
+fn data_structure_to_json(data_structure: &DataStructure, config: &Config) -> serde_json::Value {
+    match data_structure.property_type.as_str() {
+        "Object" => {
+            let mut map = serde_json::Map::new();
+            for property in &data_structure.properties {
+                map.insert(
+                    property.name.clone(),
+                    data_structure_to_json(&property, config),
+                );
+            }
+            serde_json::Value::Object(map)
+        }
+        "Array" => {
+            let mut vec = Vec::new();
+            vec.push(data_structure_to_json(
+                &data_structure.properties[0],
+                config,
+            ));
+            serde_json::Value::Array(vec)
+        }
+        "String" => property_to_type(
+            &data_structure.property_type,
+            &data_structure.format,
+            config,
+        ),
+        "Number" => property_to_type(
+            &data_structure.property_type,
+            &data_structure.format,
+            config,
+        ),
+        "Integer" => property_to_type(
+            &data_structure.property_type,
+            &data_structure.format,
+            config,
+        ),
+        "Boolean" => property_to_type(
+            &data_structure.property_type,
+            &data_structure.format,
+            config,
+        ),
+        _ => unreachable!(),
+    }
+}
+
+fn property_to_type(property_type: &String, format: &Option<String>, config: &Config) -> Value {
+    let resulting_type = match format {
+        Some(format) => config
+            .types
+            .get(property_type)
+            .unwrap()
+            .format
+            .as_ref()
+            .unwrap()
+            .get(format.as_str())
+            .unwrap()
+            .to_string(),
+        None => config.types.get(property_type).unwrap().default.to_string(),
+    };
+    to_value(resulting_type).unwrap()
 }

@@ -41,6 +41,7 @@ pub fn serde_openapi(contents: String) -> anyhow::Result<TemplateData> {
     }
     let component_schemas = doc.components.unwrap().schemas;
     let mut template_data = TemplateData::default();
+    template_data.base_url = doc.servers.iter().map(|x| x.url.clone()).collect();
     info!("Extracting models");
     for endpoint in &endpoints {
         debug!("Endpoint: {:#?}", endpoint);
@@ -136,6 +137,10 @@ fn extract_model_from_schema(
                 property_type: "String".to_string(),
                 object_name: None,
                 is_root: false,
+                pattern: str.pattern.clone(),
+                min_length: str.min_length.map(|x| x.into()),
+                max_length: str.max_length.map(|x| x.into()),
+                ..Default::default()
             },
             openapiv3::Type::Number(num) => DataStructure {
                 name: name.to_string(),
@@ -154,6 +159,10 @@ fn extract_model_from_schema(
                 property_type: "Number".to_string(),
                 object_name: None,
                 is_root: false,
+                pattern: None,
+                min: num.minimum.map(|x| x.into()),
+                max: num.maximum.map(|x| x.into()),
+                ..Default::default()
             },
             openapiv3::Type::Integer(int) => DataStructure {
                 name: name.to_string(),
@@ -172,6 +181,10 @@ fn extract_model_from_schema(
                 property_type: "Integer".to_string(),
                 object_name: None,
                 is_root: false,
+                pattern: None,
+                max: int.maximum.map(|x| x.into()),
+                min: int.minimum.map(|x| x.into()),
+                ..Default::default()
             },
             openapiv3::Type::Object(obj) => {
                 let mut response = DataStructure {
@@ -188,6 +201,8 @@ fn extract_model_from_schema(
                     },
                     object_name: Some(format!("{}Object", name)),
                     is_root: false,
+                    pattern: None,
+                    ..Default::default()
                 };
                 for (name, schema) in &obj.properties {
                     match schema {
@@ -219,6 +234,10 @@ fn extract_model_from_schema(
                     property_type: "Array".to_string(),
                     object_name: None,
                     is_root: false,
+                    pattern: None,
+                    min_length: arr.min_items.map(|x| x.into()),
+                    max_length: arr.max_items.map(|x| x.into()),
+                    ..Default::default()
                 };
 
                 array.properties.push(match arr.items.as_ref().unwrap() {
@@ -249,6 +268,8 @@ fn extract_model_from_schema(
                 property_type: "Boolean".to_string(),
                 object_name: None,
                 is_root: false,
+                pattern: None,
+                ..Default::default()
             },
         },
         openapiv3::SchemaKind::OneOf { one_of: _ } => todo!("extract one of"),
@@ -259,7 +280,7 @@ fn extract_model_from_schema(
     }
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, PartialEq, Eq, Deserialize)]
 pub struct DataStructure {
     pub name: String,
     pub description: Option<String>,
@@ -270,6 +291,55 @@ pub struct DataStructure {
     pub property_type: String,
     pub object_name: Option<String>,
     pub is_root: bool,
+    pub pattern: Option<String>,
+    pub min: Option<Int64FloatOrUsize>,
+    pub max: Option<Int64FloatOrUsize>,
+    pub min_length: Option<usize>,
+    pub max_length: Option<usize>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Int64FloatOrUsize {
+    Int(i64),
+    UInt(usize),
+    Float(f64),
+}
+
+impl PartialEq for Int64FloatOrUsize {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Int(a), Self::Int(b)) => a == b,
+            (Self::UInt(a), Self::UInt(b)) => a == b,
+            (Self::Float(a), Self::Float(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for Int64FloatOrUsize {}
+
+impl Default for Int64FloatOrUsize {
+    fn default() -> Self {
+        Self::UInt(0)
+    }
+}
+
+impl From<usize> for Int64FloatOrUsize {
+    fn from(value: usize) -> Self {
+        Self::UInt(value)
+    }
+}
+
+impl From<i64> for Int64FloatOrUsize {
+    fn from(value: i64) -> Self {
+        Self::Int(value)
+    }
+}
+
+impl From<f64> for Int64FloatOrUsize {
+    fn from(value: f64) -> Self {
+        Self::Float(value)
+    }
 }
 
 impl DataStructure {

@@ -5,6 +5,7 @@ mod tera_extensions;
 
 use std::{
     ffi::OsStr,
+    ops::{Add, AddAssign},
     path::{Path, PathBuf},
 };
 
@@ -23,7 +24,7 @@ use simplelog::{
 };
 use sppparse::SparseRoot;
 use tera::{Context, Tera};
-use tera_extensions::{exists, extended, map_type_new};
+use tera_extensions::{exists, extended, json_response, map_type_new};
 use tera_text_filters::register_all;
 
 use crate::{config::parse_config_file, serde_method::serde_openapi};
@@ -59,6 +60,9 @@ struct GenerateArgs {
     /// Quiet mode, only displays warnings and errors
     #[clap(short, long)]
     quiet: bool,
+    /// Generates files sequentially, one at a time instead of merging
+    #[clap(short, long)]
+    sequential: bool,
 }
 
 #[derive(Debug, Args, PartialEq, Eq)]
@@ -101,6 +105,7 @@ struct EndpointExtracted {
 
 #[derive(Debug, Clone, Serialize, Default)]
 struct TemplateData {
+    base_url: Vec<String>,
     endpoints: Vec<EndpointExtracted>,
     responses: Vec<DataStructure>,
     requests: Vec<DataStructure>,
@@ -239,6 +244,7 @@ fn generate_context(args: ContextGenerateArgs) -> anyhow::Result<()> {
     let context = Context::from_serialize(&template)?;
     let output = tera.render_str("{{ __tera_context }}", &context)?;
     std::fs::write("context.json", output)?;
+    info!("Context generated and saved to context.json");
     Ok(())
 }
 
@@ -283,16 +289,20 @@ fn get_open_api_content_and_doc(api: &PathBuf) -> anyhow::Result<String> {
         }
         contents = merge(content);
         let merged_file = temp_file::with_contents(contents.as_bytes());
+        let s = contents.lines().count();
 
-        info!("Parsing OpenAPI document");
+        info!("Parsing OpenAPI document {}", s);
         SparseRoot::new_from_file(merged_file.path().to_path_buf())
     };
+
+    info!("Files merged");
 
     if let Err(e) = t {
         error!("{}", e);
         return Err(anyhow::anyhow!("OpenAPI file not valid"));
     }
     let doc = OApi::new(t.unwrap());
+    info!("Checking if OpenAPI document is valid");
     if let Err(e) = doc.check() {
         error!("{}", e);
         return Err(anyhow::anyhow!("OpenAPI file not valid"));
@@ -307,8 +317,19 @@ fn generate(args: GenerateArgs) -> anyhow::Result<()> {
         return Err(anyhow::anyhow!("OpenAPI file(s) not found"));
     }
 
-    let contents = get_open_api_content_and_doc(&args.api)?;
-
+    let contents = if args.sequential {
+        info!("Generating files sequentially");
+        let mut files = find_files(&args.api, OsStr::new("yml"));
+        files.append(&mut find_files(&args.api, OsStr::new("yaml")));
+        let mut contents = String::new();
+        for open_api_file in files {
+            info!("Generating file {:?}", open_api_file);
+            contents.add_assign(get_open_api_content_and_doc(&open_api_file)?.as_str());
+        }
+        contents
+    } else {
+        get_open_api_content_and_doc(&args.api)?
+    };
     let mut template = serde_openapi(contents)?;
     for e in &mut template.endpoints {
         e.flatten_requests();
@@ -333,6 +354,7 @@ fn generate(args: GenerateArgs) -> anyhow::Result<()> {
     tera.register_function("map_type", map_type_new(config.clone()));
     tera.register_function("extended", extended(config.extended.clone()));
     tera.register_function("exists", exists(config.extended.clone()));
+    tera.register_function("json_response", json_response(config.clone()));
     let context = Context::from_serialize(&template)?;
     // TODO render all files in dir
     // General render section
