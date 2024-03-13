@@ -250,13 +250,13 @@ fn data_structure_to_json_with_value(
         }
         "String" => match &data_structure.format {
             Some(format) => match format.as_str() {
-                "Date" => serde_json::Value::String(format!("@Date")),
-                "DateTime" => serde_json::Value::String(format!("@DateTime")),
-                "Byte" => serde_json::Value::String(format!("byte data")),
-                "Binary" => serde_json::Value::String(format!("binary data")),
-                _ => serde_json::Value::String(format!("@Sentence")),
+                "Date" => serde_json::Value::String("@Date".to_string()),
+                "DateTime" => serde_json::Value::String("@DateTime".to_string()),
+                "Byte" => serde_json::Value::String("byte data".to_string()),
+                "Binary" => serde_json::Value::String("binary data".to_string()),
+                _ => serde_json::Value::String("@Sentence".to_string()),
             },
-            None => serde_json::Value::String(format!("@Sentence")),
+            None => serde_json::Value::String("@Sentence".to_string()),
         },
         "Number" => match &data_structure.format {
             Some(format) => match format.as_str() {
@@ -364,7 +364,7 @@ fn data_structure_to_json_with_value(
                 }
             }
         },
-        "Boolean" => serde_json::Value::String(format!("@Bool")),
+        "Boolean" => serde_json::Value::String("@Bool".to_string()),
         _ => unreachable!(),
     }
 }
