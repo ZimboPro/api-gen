@@ -24,7 +24,9 @@ use simplelog::{
 };
 use sppparse::SparseRoot;
 use tera::{Context, Tera};
-use tera_extensions::{exists, extended, json_typing, json_value, map_type_new};
+use tera_extensions::{
+    exists, extended, json_minimum_value, json_typing, json_value, map_type_new,
+};
 use tera_text_filters::register_all;
 
 use crate::{config::parse_config_file, serde_method::serde_openapi};
@@ -356,6 +358,7 @@ fn generate(args: GenerateArgs) -> anyhow::Result<()> {
     tera.register_function("exists", exists(config.extended.clone()));
     tera.register_function("json_typing", json_typing(config.clone()));
     tera.register_function("json_value", json_value(config.clone()));
+    tera.register_function("json_min_value", json_minimum_value(config.clone()));
     let context = Context::from_serialize(&template)?;
     // TODO render all files in dir
     // General render section
