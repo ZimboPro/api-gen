@@ -1,0 +1,24 @@
+arrayLayout: "#array #{type}"
+types:
+    String:
+        default: "#string"
+        format:
+            Date: "#string"
+            DateTime: "#string"
+            Password: "#string"
+            Byte: "#string"
+            Binary: "#string"
+    Number:
+        default: "#number"
+        format:
+            Float: "#number"
+            Double: "#number"
+    Integer:
+        default: "#number"
+        format:
+            Int32: "#number"
+            Int64: "#number"
+    Boolean:
+        default: "#boolean"
+extended:
+    feature: FAQ
