@@ -7,15 +7,25 @@
 - [ ] Determine if there is a better way to map types (preprocess the mapped types?)
 - [ ] Document/Generate available data in the context
 - [ ] Self update
+- [ ] Caching
+    - [ ] Hashing
+- [ ] Benchmarking
+    - [ ] Large files
+        - [ ] Pet store
+    - [ ] GHA scenario
 
 ## Data to be extracted/generated from OpenAPI
 
 - [x] Generate request data
 - [ ] Generate path parameter
 - [ ] Generate query parameter
-- [ ] Base url
-- [ ] Patterns
+- [x] Base urls
+- [x] Patterns
 - [ ] Validation rules (min, max, max length etc)
+    - [ ] Min
+    - [ ] Max
+    - [ ] Min length
+    - [ ] Max length
 
 ## Generation
 
