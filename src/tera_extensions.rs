@@ -5,8 +5,9 @@ use tera::{from_value, to_value, Function, Value};
 
 use crate::{
     config::{Config, Type},
-    serde_method::DataStructure,
+    serde_method::{DataStructure, Int64FloatOrUsize},
 };
+use mock_json::mock;
 
 pub fn extended(extended: HashMap<String, String>) -> impl Function {
     Box::new(
@@ -124,10 +125,10 @@ pub fn map_type_new(config: Config) -> impl Function {
     )
 }
 
-pub fn json_response(config: Config) -> impl Function {
+pub fn json_typing(config: Config) -> impl Function {
     Box::new(
         move |args: &HashMap<String, Value>| -> tera::Result<Value> {
-            match args.get("response") {
+            match args.get("structure") {
                 None => Err("Expect value to be set".into()),
                 Some(type_name) => match from_value::<DataStructure>(type_name.clone()) {
                     Ok(v) => {
@@ -203,3 +204,190 @@ fn property_to_type(property_type: &String, format: &Option<String>, config: &Co
     };
     to_value(resulting_type).unwrap()
 }
+
+pub fn json_value(config: Config) -> impl Function {
+    Box::new(
+        move |args: &HashMap<String, Value>| -> tera::Result<Value> {
+            match args.get("structure") {
+                None => Err("Expect value to be set".into()),
+                Some(type_name) => match from_value::<DataStructure>(type_name.clone()) {
+                    Ok(v) => {
+                        if v.is_root {
+                            let sample_json = data_structure_to_json_with_value(&v, &config);
+                            Ok(mock(&sample_json))
+                        } else {
+                            Err("Expected the root object".into())
+                        }
+                    }
+                    Err(_) => Err("oops".into()),
+                },
+            }
+        },
+    )
+}
+
+fn data_structure_to_json_with_value(
+    data_structure: &DataStructure,
+    config: &Config,
+) -> serde_json::Value {
+    match data_structure.property_type.as_str() {
+        "Object" => {
+            let mut map = serde_json::Map::new();
+            for property in &data_structure.properties {
+                map.insert(
+                    property.name.clone(),
+                    data_structure_to_json_with_value(property, config),
+                );
+            }
+            serde_json::Value::Object(map)
+        }
+        "Array" => {
+            let vec = vec![data_structure_to_json_with_value(
+                &data_structure.properties[0],
+                config,
+            )];
+            serde_json::Value::Array(vec)
+        }
+        "String" => match &data_structure.format {
+            Some(format) => match format.as_str() {
+                "Date" => serde_json::Value::String(format!("@Date")),
+                "DateTime" => serde_json::Value::String(format!("@DateTime")),
+                "Byte" => serde_json::Value::String(format!("byte data")),
+                "Binary" => serde_json::Value::String(format!("binary data")),
+                _ => serde_json::Value::String(format!("@Sentence")),
+            },
+            None => serde_json::Value::String(format!("@Sentence")),
+        },
+        "Number" => match &data_structure.format {
+            Some(format) => match format.as_str() {
+                "Float" => {
+                    let min = data_structure
+                        .min
+                        .clone()
+                        .unwrap_or(Int64FloatOrUsize::Float(std::f32::MIN as f64));
+                    let max: Int64FloatOrUsize = data_structure
+                        .max
+                        .clone()
+                        .unwrap_or(Int64FloatOrUsize::Float(std::f32::MAX as f64));
+                    match (min, max) {
+                        (Int64FloatOrUsize::Float(min), Int64FloatOrUsize::Float(max)) => {
+                            serde_json::Value::String(format!("@Float|{}~{}", min, max))
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+                "Double" => {
+                    let min = data_structure
+                        .min
+                        .clone()
+                        .unwrap_or(Int64FloatOrUsize::Int(std::i64::MIN));
+                    let max: Int64FloatOrUsize = data_structure
+                        .max
+                        .clone()
+                        .unwrap_or(Int64FloatOrUsize::Int(std::i64::MAX));
+                    match (min, max) {
+                        (Int64FloatOrUsize::Int(min), Int64FloatOrUsize::Int(max)) => {
+                            serde_json::Value::String(format!("@Float|{}~{}", min, max))
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+                _ => unreachable!(),
+            },
+            None => {
+                let min = data_structure
+                    .min
+                    .clone()
+                    .unwrap_or(Int64FloatOrUsize::Float(std::f32::MIN as f64));
+                let max: Int64FloatOrUsize = data_structure
+                    .max
+                    .clone()
+                    .unwrap_or(Int64FloatOrUsize::Float(std::f32::MAX as f64));
+                match (min, max) {
+                    (Int64FloatOrUsize::Float(min), Int64FloatOrUsize::Float(max)) => {
+                        serde_json::Value::String(format!("@Float|{}~{}", min, max))
+                    }
+                    _ => unreachable!(),
+                }
+            }
+        },
+        "Integer" => match &data_structure.format {
+            Some(format) => match format.as_str() {
+                "Int32" => {
+                    let min = data_structure
+                        .min
+                        .clone()
+                        .unwrap_or(Int64FloatOrUsize::Int(std::i32::MIN as i64));
+                    let max: Int64FloatOrUsize = data_structure
+                        .max
+                        .clone()
+                        .unwrap_or(Int64FloatOrUsize::Int(std::i32::MAX as i64));
+                    match (min, max) {
+                        (Int64FloatOrUsize::Int(min), Int64FloatOrUsize::Int(max)) => {
+                            serde_json::Value::String(format!("@Number|{}~{}", min, max))
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+                "Int64" => {
+                    let min = data_structure
+                        .min
+                        .clone()
+                        .unwrap_or(Int64FloatOrUsize::Int(std::i64::MIN));
+                    let max: Int64FloatOrUsize = data_structure
+                        .max
+                        .clone()
+                        .unwrap_or(Int64FloatOrUsize::Int(std::i64::MAX));
+                    match (min, max) {
+                        (Int64FloatOrUsize::Int(min), Int64FloatOrUsize::Int(max)) => {
+                            serde_json::Value::String(format!("@Number|{}~{}", min, max))
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+                _ => unreachable!(),
+            },
+            None => {
+                let min = data_structure
+                    .min
+                    .clone()
+                    .unwrap_or(Int64FloatOrUsize::Int(std::i32::MIN as i64));
+                let max: Int64FloatOrUsize = data_structure
+                    .max
+                    .clone()
+                    .unwrap_or(Int64FloatOrUsize::Int(std::i32::MAX as i64));
+                match (min, max) {
+                    (Int64FloatOrUsize::Int(min), Int64FloatOrUsize::Int(max)) => {
+                        serde_json::Value::String(format!("@Number|{}~{}", min, max))
+                    }
+                    _ => unreachable!(),
+                }
+            }
+        },
+        "Boolean" => serde_json::Value::String(format!("@Bool")),
+        _ => unreachable!(),
+    }
+}
+
+// fn property_to_type_with_value(
+//     property_type: &String,
+//     format: &Option<String>,
+//     config: &Config,
+// ) -> Value {
+//     let resulting_type = match format {
+//         Some(format) => config
+//             .types
+//             .get(property_type)
+//             .unwrap()
+//             .format
+//             .as_ref()
+//             .unwrap()
+//             .get(format.as_str())
+//             .unwrap()
+//             .to_string(),
+//         None => {
+//             let t = config.types.get(property_type).unwrap();
+//         }
+//     };
+//     to_value(resulting_type).unwrap()
+// }
