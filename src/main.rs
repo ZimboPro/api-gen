@@ -1,5 +1,6 @@
 mod config;
 mod init;
+mod json_tera_extensions;
 mod serde_method;
 mod tera_extensions;
 
@@ -13,6 +14,7 @@ use clap::{Args, Parser};
 
 use config::Config;
 use init::init;
+use json_tera_extensions::json_value_random;
 use merge_yaml_hash::MergeYamlHash;
 use oapi::OApi;
 use openapiv3::{Parameter, RequestBody, Response};
@@ -359,6 +361,7 @@ fn generate(args: GenerateArgs) -> anyhow::Result<()> {
     tera.register_function("json_typing", json_typing(config.clone()));
     tera.register_function("json_value", json_value(config.clone()));
     tera.register_function("json_min_value", json_minimum_value(config.clone()));
+    tera.register_function("json_random_value", json_value_random(config.clone()));
     let context = Context::from_serialize(&template)?;
     // TODO render all files in dir
     // General render section
