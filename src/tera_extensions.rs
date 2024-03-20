@@ -228,7 +228,7 @@ pub fn json_value(config: Config) -> impl Function {
 
 fn data_structure_to_json_with_value(
     data_structure: &DataStructure,
-    config: &Config,
+    _config: &Config,
 ) -> serde_json::Value {
     match data_structure.property_type.as_str() {
         "Object" => {
@@ -236,7 +236,7 @@ fn data_structure_to_json_with_value(
             for property in &data_structure.properties {
                 map.insert(
                     property.name.clone(),
-                    data_structure_to_json_with_value(property, config),
+                    data_structure_to_json_with_value(property, _config),
                 );
             }
             serde_json::Value::Object(map)
@@ -244,7 +244,7 @@ fn data_structure_to_json_with_value(
         "Array" => {
             let vec = vec![data_structure_to_json_with_value(
                 &data_structure.properties[0],
-                config,
+                _config,
             )];
             serde_json::Value::Array(vec)
         }
@@ -393,7 +393,7 @@ pub fn json_minimum_value(config: Config) -> impl Function {
 
 fn data_structure_to_minimum_json_with_value(
     data_structure: &DataStructure,
-    config: &Config,
+    _config: &Config,
 ) -> serde_json::Value {
     if !data_structure.required {
         return serde_json::Value::Null;
@@ -405,7 +405,7 @@ fn data_structure_to_minimum_json_with_value(
                 if property.required {
                     map.insert(
                         property.name.clone(),
-                        data_structure_to_minimum_json_with_value(property, config),
+                        data_structure_to_minimum_json_with_value(property, _config),
                     );
                 }
             }
@@ -414,7 +414,7 @@ fn data_structure_to_minimum_json_with_value(
         "Array" => {
             let vec = vec![data_structure_to_minimum_json_with_value(
                 &data_structure.properties[0],
-                config,
+                _config,
             )];
             serde_json::Value::Array(vec)
         }

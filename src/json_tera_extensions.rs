@@ -34,7 +34,7 @@ pub fn json_value_random(config: Config) -> impl Function {
 
 fn data_structure_to_random_json_with_value(
     data_structure: &DataStructure,
-    config: &Config,
+    _config: &Config,
     random: &mut ThreadRng,
 ) -> serde_json::Value {
     let generate_json: bool = random.gen();
@@ -46,10 +46,10 @@ fn data_structure_to_random_json_with_value(
             let mut map = serde_json::Map::new();
             for property in &data_structure.properties {
                 let generate_json: bool = random.gen();
-                if property.required || (!property.required && generate_json) {
+                if property.required || generate_json {
                     map.insert(
                         property.name.clone(),
-                        data_structure_to_random_json_with_value(property, config, random),
+                        data_structure_to_random_json_with_value(property, _config, random),
                     );
                 }
             }
@@ -58,7 +58,7 @@ fn data_structure_to_random_json_with_value(
         "Array" => {
             let vec = vec![data_structure_to_random_json_with_value(
                 &data_structure.properties[0],
-                config,
+                _config,
                 random,
             )];
             serde_json::Value::Array(vec)
