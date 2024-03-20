@@ -16,16 +16,17 @@
 
 ## Data to be extracted/generated from OpenAPI
 
+- [x] Check if request body is required
 - [x] Generate request data
 - [ ] Generate path parameter
 - [ ] Generate query parameter
 - [x] Base urls
 - [x] Patterns
-- [ ] Validation rules (min, max, max length etc)
-    - [ ] Min
-    - [ ] Max
-    - [ ] Min length
-    - [ ] Max length
+- [x] Validation rules (min, max, max length etc)
+    - [x] Min
+    - [x] Max
+    - [x] Min length
+    - [x] Max length
 
 ## Generation
 
