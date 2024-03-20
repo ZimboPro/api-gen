@@ -48,9 +48,9 @@ pub fn serde_openapi(contents: String) -> anyhow::Result<TemplateData> {
     for endpoint in &endpoints {
         debug!("Endpoint: {:#?}", endpoint);
         let mut new_endpoint: EndpointExtracted = endpoint.clone().into();
-        if let Some(request) = &endpoint.request {
+        if let Some(openapi_request) = &endpoint.request {
             let mut request = extract_model(
-                request
+                openapi_request
                     .content
                     .get("application/json")
                     .as_ref()
@@ -64,6 +64,7 @@ pub fn serde_openapi(contents: String) -> anyhow::Result<TemplateData> {
             );
             request.process_data();
             request.is_root = true;
+            request.required = openapi_request.required;
             if request.property_type == "Object" {
                 request.object_name = Some(request.name.clone());
             }
